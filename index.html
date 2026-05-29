@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>💰 ระบบจัดการการเงิน - Financial Manager</title>
+    <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#1e40af">
+    <meta name="description" content="จัดการรายรับ รายจ่าย และหนี้สินของคุณอย่างมีประสิทธิภาพ">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1e40af;
+            --secondary: #7c3aed;
+            --success: #059669;
+            --danger: #dc2626;
+            --light: #f9fafb;
+            --dark: #1f2937;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        .logo {
+            font-size: 80px;
+            margin-bottom: 20px;
+            animation: bounce 0.6s ease-out 0.2s backwards;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            color: var(--primary);
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: #6b7280;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 40px;
+        }
+
+        .feature {
+            padding: 15px;
+            background: var(--light);
+            border-radius: 12px;
+            font-size: 0.9em;
+        }
+
+        .feature-icon {
+            font-size: 1.8em;
+            margin-bottom: 8px;
+        }
+
+        .feature-text {
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 18px 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(30, 64, 175, 0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(30, 64, 175, 0.4);
+        }
+
+        .cta-button:active {
+            transform: translateY(-1px);
+        }
+
+        .secondary-button {
+            display: inline-block;
+            padding: 12px 30px;
+            background: var(--light);
+            color: var(--primary);
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-weight: 600;
+            margin: 10px 5px;
+            border: 2px solid var(--primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .secondary-button:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .info {
+            padding: 20px;
+            background: rgba(30, 64, 175, 0.1);
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+            margin-top: 30px;
+            text-align: left;
+            font-size: 0.95em;
+            color: #4b5563;
+            line-height: 1.6;
+        }
+
+        .info-title {
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        .stat {
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(30, 64, 175, 0.1), rgba(124, 58, 237, 0.1));
+            border-radius: 10px;
+        }
+
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.8em;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 25px;
+            }
+
+            h1 {
+                font-size: 1.8em;
+            }
+
+            .features {
+                grid-template-columns: 1fr;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .cta-button {
+                width: 100%;
+                padding: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">💰</div>
+        
+        <h1>ระบบจัดการการเงิน</h1>
+        <p class="subtitle">
+            จัดการรายรับ รายจ่าย และหนี้สิน<br>
+            อย่างมีประสิทธิภาพและง่ายดาย
+        </p>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number">✅</div>
+                <div class="stat-label">ใช้งานได้ทั้งออฟไลน์</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">🔒</div>
+                <div class="stat-label">ข้อมูลปลอดภัย</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number">📱</div>
+                <div class="stat-label">ใช้ได้ทุกอุปกรณ์</div>
+            </div>
+        </div>
+
+        <div class="features">
+            <div class="feature">
+                <div class="feature-icon">📋</div>
+                <div class="feature-text">บันทึกรายการ</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📊</div>
+                <div class="feature-text">ดูรายงาน</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">🧮</div>
+                <div class="feature-text">คำนวณเงินกู้</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">💾</div>
+                <div class="feature-text">เก็บข้อมูล</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">✏️</div>
+                <div class="feature-text">แก้ไข/ลบได้</div>
+            </div>
+            <div class="feature">
+                <div class="feature-icon">📥</div>
+                <div class="feature-text">นำเข้าข้อมูล</div>
+            </div>
+        </div>
+
+        <button class="cta-button" onclick="goToApp()">🚀 เข้าใช้งาน</button>
+
+        <div style="margin-bottom: 20px;">
+            <button class="secondary-button" onclick="installApp()">📱 ติดตั้งเป็น App</button>
+        </div>
+
+        <div class="info">
+            <div class="info-title">✨ คุณสมบัติเด่น</div>
+            <ul style="list-style: none; padding: 0;">
+                <li>✅ ป้อนข้อมูลได้หลายรายการพร้อมกัน</li>
+                <li>✅ แสดง In/Out/Balance อัตโนมัติ</li>
+                <li>✅ ตัวบงชี้การจ่าย (✅/⏳)</li>
+                <li>✅ รายงานรายละเอียด</li>
+                <li>✅ ส่งออก/นำเข้าข้อมูล</li>
+                <li>✅ ใช้ได้แม้ออฟไลน์</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function goToApp() {
+            window.location.href = './financial_manager.html';
+        }
+
+        function installApp() {
+            alert('📱 ขั้นตอนติดตั้ง:\n\n1. คลิกเมนู (≡) ด้านบนขวา\n2. เลือก "Add to Home Screen"\n3. ตั้งชื่อ และคลิก "Add"');
+        }
+
+        // Auto redirect if accessing from direct app
+        if (window.location.pathname.includes('financial-app') && !window.location.pathname.includes('index')) {
+            // Keep on current page
+        }
+    </script>
+</body>
+</html>
