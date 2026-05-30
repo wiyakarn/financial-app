@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>💰 จัดการการเงิน — Wiyakarn</title>
+<meta name="theme-color" content="#1e40af">
+<meta name="description" content="ระบบจัดการการเงินส่วนบุคคล หนี้สิน รายรับ รายจ่าย">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💰</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+:root {
+    --primary: #1e40af;
+    --secondary: #7c3aed;
+    --success: #059669;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --info: #0891b2;
+    --pink: #ec4899;
+    --purple: #8b5cf6;
+    --light: #f9fafb;
+    --gray: #6b7280;
+    --gray-light: #f3f4f6;
+    --dark: #1f2937;
+    --border: #e5e7eb;
+}
+html, body {
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #f3f4f6;
+    color: var(--dark);
+    min-height: 100vh;
+    overscroll-behavior: none;
+}
+body { padding-bottom: 90px; }
+.container { max-width: 900px; margin: 0 auto; padding: 12px; }
+/* Header */
+header {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 18px 16px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    text-align: center;
+    box-shadow: 0 4px 12px rgba(30,64,175,0.2);
+}
+h1 { font-size: 1.5em; margin-bottom: 4px; }
+header p { opacity: 0.95; font-size: 0.85em; }
+/* Month bar */
+.month-bar {
+    background: white;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.month-bar button {
+    background: var(--light);
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 1.1em;
+    cursor: pointer;
+    font-weight: 600;
+}
+.month-bar button:active { opacity: 0.6; }
+.month-display {
+    font-weight: bold;
+    color: var(--primary);
+    font-size: 1.05em;
+    text-align: center;
+    flex: 1;
+}
+/* Summary cards */
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.summary-card {
+    background: white;
+    border-radius: 12px;
+    padding: 14px 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    text-align: center;
+}
+.summary-card .label {
+    font-size: 0.75em;
+    color: var(--gray);
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+.summary-card .value {
+    font-size: 1.3em;
+    font-weight: bold;
+}
+.summary-card.in { border-left: 4px solid var(--success); }
+.summary-card.in .value { color: var(--success); }
+.summary-card.debt { border-left: 4px solid var(--warning); }
+.summary-card.debt .value { color: var(--warning); }
+.summary-card.out { border-left: 4px solid var(--danger); }
+.summary-card.out .value { color: var(--danger); }
+.summary-card.balance {
+    border-left: 4px solid var(--primary);
+    grid-column: span 2;
+    background: linear-gradient(135deg, #eff6ff, white);
+}
+.summary-card.balance .value { color: var(--primary); font-size: 1.7em; }
+.carryover-tag {
+    display: inline-block;
+    background: #fef3c7;
+    color: #92400e;
+    padding: 3px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    margin-top: 4px;
+    font-weight: 600;
+}
+/* Group section */
+.group {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    overflow: hidden;
+}
+.group-header {
+    padding: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+.group-header.debt { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+.group-header.personal { background: linear-gradient(135deg, #fce7f3, #fbcfe8); }
+.group-header.phone { background: linear-gradient(135deg, #ddd6fe, #c4b5fd); }
+.group-header.invest { background: linear-gradient(135deg, #d1fae5, #a7f3d0); }
+.group-header.income { background: linear-gradient(135deg, #dbeafe, #bfdbfe); }
+.group-header.expense { background: linear-gradient(135deg, #fee2e2, #fecaca); }
+.group-title { font-weight: bold; font-size: 1em; }
+.group-total {
+    font-size: 0.78em;
+    color: var(--gray);
+    font-weight: 600;
+    margin-top: 2px;
+}
+.group-toggle { font-size: 1.1em; transition: transform 0.2s; }
+.group.collapsed .group-toggle { transform: rotate(-90deg); }
+.group.collapsed .group-body { display: none; }
+.group-body { padding: 8px; }
+/* Item card per category */
+.item-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--light);
+    margin-bottom: 6px;
+    gap: 8px;
+}
+.item-name {
+    font-weight: 600;
+    font-size: 0.95em;
+}
+.item-totals {
+    font-size: 0.75em;
+    color: var(--gray);
+    margin-top: 2px;
+}
+.item-totals .in-val { color: var(--success); font-weight: 600; }
+.item-totals .out-val { color: var(--danger); font-weight: 600; }
+.item-balance {
+    font-weight: bold;
+    font-size: 1em;
+    text-align: right;
+    min-width: 90px;
+}
+.item-balance.pos { color: var(--success); }
+.item-balance.neg { color: var(--danger); }
+.item-balance.zero { color: var(--gray); }
+.quick-add-btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: 700;
+    cursor: pointer;
+    margin-left: 8px;
+}
+.pay-btn {
+    background: var(--danger);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: 700;
+    cursor: pointer;
+}
+.item-history-btn {
+    background: var(--light);
+    color: var(--primary);
+    border: 1px solid var(--primary);
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 0.78em;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 4px;
+}
+/* FAB */
+.fab {
+    position: fixed;
+    bottom: 88px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    border: none;
+    font-size: 2em;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(30, 64, 175, 0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fab:active { transform: scale(0.95); }
+/* Bottom Nav */
+.bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-around;
+    padding: 8px 0;
+    z-index: 99;
+    box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+}
+.nav-btn {
+    background: none;
+    border: none;
+    flex: 1;
+    padding: 6px 2px;
+    font-size: 0.68em;
+    color: var(--gray);
+    cursor: pointer;
+    font-weight: 600;
+}
+.nav-btn .icon { font-size: 1.5em; display: block; margin-bottom: 2px; }
+.nav-btn.active { color: var(--primary); }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+/* Modal */
+.modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    z-index: 1000;
+    align-items: flex-end;
+    justify-content: center;
+}
+.modal.active { display: flex; }
+.modal-content {
+    background: white;
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+    width: 100%;
+    max-width: 600px;
+    max-height: 92vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+.modal-header h2 { font-size: 1.2em; }
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.6em;
+    cursor: pointer;
+    color: var(--gray);
+}
+.form-group { margin-bottom: 14px; }
+label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    font-size: 0.9em;
+}
+input, select, textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 1em;
+    background: var(--light);
+}
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: white;
+}
+/* Direction toggle */
+.direction-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+.dir-btn {
+    flex: 1;
+    padding: 14px;
+    border: 2px solid var(--border);
+    background: white;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 0.95em;
+}
+.dir-btn.active.in { border-color: var(--success); background: #d1fae5; color: var(--success); }
+.dir-btn.active.out { border-color: var(--danger); background: #fee2e2; color: var(--danger); }
+.cat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    margin-bottom: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 4px;
+}
+.cat-chip {
+    padding: 11px 8px;
+    background: var(--light);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.15s;
+}
+.cat-chip:hover, .cat-chip:active { background: #eff6ff; }
+.cat-chip.selected {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.cat-group-label {
+    grid-column: span 2;
+    font-size: 0.75em;
+    color: var(--gray);
+    margin-top: 8px;
+    margin-bottom: 4px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+button { transition: opacity 0.15s; }
+button:active { opacity: 0.7; }
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
+    color: white;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1em;
+    cursor: pointer;
+    width: 100%;
+}
+.btn-secondary {
+    background: var(--light);
+    color: var(--dark);
+    border: 1px solid var(--border);
+    padding: 12px;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-danger {
+    background: var(--danger);
+    color: white;
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8em;
+    cursor: pointer;
+}
+.trans-item {
+    background: white;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 8px;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.trans-item .meta { font-size: 0.75em; color: var(--gray); }
+.trans-item .amt { font-weight: bold; font-size: 1em; }
+.trans-item .amt.in { color: var(--success); }
+.trans-item .amt.out { color: var(--danger); }
+.group-stripe-debt { border-left: 4px solid var(--warning); }
+.group-stripe-personal { border-left: 4px solid var(--pink); }
+.group-stripe-phone { border-left: 4px solid var(--purple); }
+.group-stripe-invest { border-left: 4px solid var(--success); }
+.group-stripe-income { border-left: 4px solid var(--info); }
+.group-stripe-expense { border-left: 4px solid var(--danger); }
+.empty {
+    text-align: center;
+    padding: 24px;
+    color: var(--gray);
+    font-size: 0.9em;
+    background: white;
+    border-radius: 12px;
+}
+.info-box {
+    background: #eff6ff;
+    border-left: 4px solid var(--info);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    margin-bottom: 12px;
+}
+.add-cat-row {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    padding: 4px;
+}
+.add-cat-row input {
+    flex: 1;
+    padding: 8px;
+    font-size: 0.85em;
+}
+.add-cat-row button {
+    padding: 8px 14px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+.filter-pills {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    margin-bottom: 12px;
+    padding: 4px 0;
+    scrollbar-width: thin;
+}
+.filter-pills::-webkit-scrollbar { height: 4px; }
+.filter-pill {
+    padding: 7px 13px;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    font-size: 0.8em;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+}
+.filter-pill.active { background: var(--primary); color: white; border-color: var(--primary); }
+.cat-edit-btn {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 1em;
+    cursor: pointer;
+    padding: 2px 6px;
+}
+/* ===== SUMMARY TAB ===== */
+.summary-mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    background: white;
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.summary-mode-btn {
+    flex: 1;
+    padding: 10px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: var(--gray);
+}
+.summary-mode-btn.active {
+    background: var(--primary);
+    color: white;
+}
+.date-range-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.date-range-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.date-range-row label {
+    font-size: 0.78em;
+    margin-bottom: 2px;
+}
+.date-range-row input {
+    padding: 8px;
+    font-size: 0.9em;
+}
+.quick-range-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.quick-range-btn {
+    flex: 1;
+    min-width: 70px;
+    padding: 7px;
+    background: var(--light);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 0.78em;
+    font-weight: 600;
+    cursor: pointer;
+}
+.quick-range-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+.summary-table {
+    width: 100%;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    margin-bottom: 12px;
+    border-collapse: collapse;
+}
+.summary-table th, .summary-table td {
+    padding: 10px 8px;
+    text-align: right;
+    font-size: 0.85em;
+    border-bottom: 1px solid var(--border);
+}
+.summary-table th {
+    background: var(--gray-light);
+    font-weight: 700;
+    color: var(--dark);
+    text-align: center;
+}
+.summary-table td:first-child, .summary-table th:first-child { text-align: left; }
+.summary-table .total-row {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    font-weight: bold;
+}
+.summary-table .total-row td { border-bottom: none; padding: 12px 8px; }
+.summary-table .in-cell { color: var(--success); font-weight: 600; }
+.summary-table .out-cell { color: var(--danger); font-weight: 600; }
+.summary-table .bal-cell { font-weight: 700; }
+.summary-table .bal-cell.pos { color: var(--success); }
+.summary-table .bal-cell.neg { color: var(--danger); }
+.summary-table .bal-cell.zero { color: var(--gray); }
+.item-select-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.item-select-card select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1em;
+}
+.bar-chart {
+    background: white;
+    padding: 14px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.bar-chart h3 { font-size: 1em; margin-bottom: 12px; color: var(--dark); }
+.bar-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 0.85em;
+}
+.bar-row .bar-label { font-weight: 600; }
+.bar-row .bar-value { text-align: right; font-weight: 700; font-size: 0.85em; }
+.bar-container {
+    background: var(--gray-light);
+    border-radius: 4px;
+    height: 22px;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+}
+.bar-fill-in { background: linear-gradient(90deg, var(--success), #10b981); height: 100%; }
+.bar-fill-out { background: linear-gradient(90deg, var(--danger), #ef4444); height: 100%; }
+.scroll-x { overflow-x: auto; }
+@media (min-width: 600px) {
+    .summary-grid { grid-template-columns: repeat(4, 1fr); }
+    .summary-card.balance { grid-column: span 4; }
+}
+/* ===== PDF REPORT (off-screen) ===== */
+#pdfReport {
+    position: fixed;
+    left: -99999px;
+    top: 0;
+    width: 794px;
+    background: #ffffff;
+    color: #1f2937;
+    padding: 28px;
+    font-family: 'Segoe UI', -apple-system, sans-serif;
+}
+#pdfReport .pdf-title { font-size: 22px; font-weight: bold; color: #1e40af; }
+#pdfReport .pdf-sub { font-size: 12px; color: #6b7280; margin-bottom: 16px; }
+#pdfReport .pdf-cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 18px; }
+#pdfReport .pdf-card { border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; text-align: center; }
+#pdfReport .pdf-card .l { font-size: 11px; color: #6b7280; }
+#pdfReport .pdf-card .v { font-size: 18px; font-weight: bold; margin-top: 4px; }
+#pdfReport table { width: 100%; border-collapse: collapse; margin-bottom: 18px; font-size: 12px; }
+#pdfReport th, #pdfReport td { border: 1px solid #e5e7eb; padding: 7px 9px; text-align: right; }
+#pdfReport th { background: #f3f4f6; }
+#pdfReport td:first-child, #pdfReport th:first-child { text-align: left; }
+#pdfReport .g-row { background: #eff6ff; font-weight: bold; }
+#pdfReport h3 { font-size: 14px; color: #1f2937; margin: 4px 0 8px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>💰 จัดการการเงิน</h1>
+        <p>หนี้สิน • รายรับ • รายจ่าย • คำนวณอัตโนมัติ</p>
+    </header>
+    <div class="month-bar">
+        <button onclick="changeMonth(-1)">◀</button>
+        <div class="month-display" id="monthDisplay">-</div>
+        <button onclick="changeMonth(1)">▶</button>
+        <button onclick="goToCurrentMonth()" style="font-size:0.85em;">📅</button>
+    </div>
+    <!-- TAB: Dashboard -->
+    <div id="tab-dashboard" class="tab-content active">
+        <div class="summary-grid">
+            <div class="summary-card in">
+                <div class="label">💵 รายรับ</div>
+                <div class="value" id="sumIn">0</div>
+                <div id="carryTag"></div>
+            </div>
+            <div class="summary-card debt">
+                <div class="label">🏦 หนี้สิน (จ่าย)</div>
+                <div class="value" id="sumDebt">0</div>
+            </div>
+            <div class="summary-card out">
+                <div class="label">💸 รายจ่าย</div>
+                <div class="value" id="sumOut">0</div>
+            </div>
+            <div class="summary-card balance">
+                <div class="label">💳 คงเหลือ (Balance)</div>
+                <div class="value" id="sumBalance">0</div>
+                <div style="font-size:0.7em; color:var(--gray); margin-top:4px;">จะยกไปเดือนถัดไปอัตโนมัติ</div>
+            </div>
+        </div>
+        <div id="groupsContainer"></div>
+    </div>
+    <!-- TAB: Transactions List -->
+    <div id="tab-list" class="tab-content">
+        <div class="filter-pills" id="filterPills">
+            <div class="filter-pill active" data-filter="all">ทั้งหมด</div>
+            <div class="filter-pill" data-filter="in">💵 IN</div>
+            <div class="filter-pill" data-filter="out">💸 OUT</div>
+            <div class="filter-pill" data-filter="debt">🏦 หนี้สิน</div>
+            <div class="filter-pill" data-filter="personal">👨‍👩‍👧 บุคคล</div>
+            <div class="filter-pill" data-filter="phone">📞 โทรศัพท์</div>
+            <div class="filter-pill" data-filter="invest">📈 ลงทุน</div>
+        </div>
+        <div id="transactionList"></div>
+    </div>
+    <!-- TAB: Monthly Summary -->
+    <div id="tab-summary" class="tab-content">
+        <div class="summary-mode-toggle">
+            <button class="summary-mode-btn active" data-mode="byMonth" onclick="setSummaryMode('byMonth')">📅 ตามเดือน</button>
+            <button class="summary-mode-btn" data-mode="byItem" onclick="setSummaryMode('byItem')">🏷️ ตามรายการ</button>
+        </div>
+        <div class="date-range-card">
+            <label style="margin-bottom:8px;">📆 ช่วงวันที่:</label>
+            <div class="date-range-row">
+                <div>
+                    <label>จาก</label>
+                    <input type="month" id="rangeFrom">
+                </div>
+                <div>
+                    <label>ถึง</label>
+                    <input type="month" id="rangeTo">
+                </div>
+            </div>
+            <div class="quick-range-btns">
+                <button class="quick-range-btn" onclick="setQuickRange(3)">3 เดือน</button>
+                <button class="quick-range-btn" onclick="setQuickRange(6)">6 เดือน</button>
+                <button class="quick-range-btn active" onclick="setQuickRange(12)">12 เดือน</button>
+                <button class="quick-range-btn" onclick="setQuickRange('ytd')">ปีนี้</button>
+                <button class="quick-range-btn" onclick="setQuickRange('all')">ทั้งหมด</button>
+            </div>
+        </div>
+        <!-- Mode: By Month -->
+        <div id="modeByMonth">
+            <div id="byMonthContent"></div>
+        </div>
+        <!-- Mode: By Item -->
+        <div id="modeByItem" style="display:none;">
+            <div class="item-select-card">
+                <label>🏷️ เลือกรายการที่ต้องการดู:</label>
+                <select id="itemPicker" onchange="renderByItem()">
+                    <option value="">-- เลือกรายการ --</option>
+                </select>
+            </div>
+            <div id="byItemContent"></div>
+        </div>
+    </div>
+    <!-- TAB: Categories -->
+    <div id="tab-cats" class="tab-content">
+        <div class="info-box">💡 จัดการหมวดหมู่ — เพิ่ม/ลบรายการในแต่ละกลุ่ม</div>
+        <div id="catsManager"></div>
+        <button class="btn-secondary" onclick="resetCategoriesToDefault()" style="width:100%; margin-top:12px;">🔄 รีเซ็ตเป็นค่าเริ่มต้น</button>
+    </div>
+    <!-- TAB: Tools -->
+    <div id="tab-tools" class="tab-content">
+        <div class="info-box">
+            ✨ <strong>คำนวณอัตโนมัติ:</strong> Balance ของแต่ละเดือนจะถูกยกไปเป็น "ยอดยกมา" ในเดือนถัดไปทันที
+        </div>
+        <div style="background:white; padding:14px; border-radius:12px; margin-bottom:10px;">
+            <strong>รายการทั้งหมด:</strong> <span id="totalCount">0</span><br>
+            <strong>รายการเดือนนี้:</strong> <span id="monthCount">0</span>
+        </div>
+        <div style="display:grid; gap:8px;">
+            <button class="btn-primary" onclick="exportPDF()" style="background:linear-gradient(135deg,var(--danger),#ef4444);">📄 ส่งออก PDF (รายงานเดือนนี้)</button>
+            <button class="btn-primary" onclick="exportData()">📥 ส่งออก (Backup)</button>
+            <button class="btn-secondary" onclick="importData()">📤 นำเข้า (Restore)</button>
+            <button class="btn-secondary" onclick="manualCarryover()">🔄 ยกยอดเดือนนี้ใหม่</button>
+            <button class="btn-danger" style="padding:14px; width:100%;" onclick="clearAllData()">🗑️ ลบข้อมูลทั้งหมด</button>
+        </div>
+    </div>
+</div>
+<button class="fab" onclick="openAddModal()">+</button>
+<nav class="bottom-nav">
+    <button class="nav-btn active" data-tab="dashboard"><span class="icon">📊</span>หน้าหลัก</button>
+    <button class="nav-btn" data-tab="list"><span class="icon">📋</span>รายการ</button>
+    <button class="nav-btn" data-tab="summary"><span class="icon">📅</span>สรุป</button>
+    <button class="nav-btn" data-tab="cats"><span class="icon">🏷️</span>หมวดหมู่</button>
+    <button class="nav-btn" data-tab="tools"><span class="icon">⚙️</span>เครื่องมือ</button>
+</nav>
+<!-- ADD MODAL -->
+<div class="modal" id="addModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>➕ บันทึกรายการ</h2>
+            <button class="close-btn" onclick="closeAddModal()">×</button>
+        </div>
+        <div class="direction-toggle">
+            <button class="dir-btn in active" id="dirInBtn" onclick="setDirection('in')">💵 รับเข้า (IN)</button>
+            <button class="dir-btn out" id="dirOutBtn" onclick="setDirection('out')">💸 จ่ายออก (OUT)</button>
+        </div>
+        <div class="form-group">
+            <label>📂 เลือกหมวดหมู่:</label>
+            <div class="cat-grid" id="catGrid"></div>
+            <div id="selectedCatInfo" style="font-size:0.9em; color:var(--primary); font-weight:600;"></div>
+        </div>
+        <div class="form-group">
+            <label>💰 จำนวน (บาท):</label>
+            <input type="number" id="addAmount" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="form-group">
+            <label>📅 วันที่:</label>
+            <input type="date" id="addDate">
+        </div>
+        <div class="form-group">
+            <label>📝 หมายเหตุ (ไม่บังคับ):</label>
+            <input type="text" id="addNote" placeholder="รายละเอียดเพิ่มเติม">
+        </div>
+        <button class="btn-primary" onclick="saveTransaction()">✅ บันทึก</button>
+    </div>
+</div>
+<!-- QUICK ADD MODAL -->
+<div class="modal" id="quickModal">
+    <div class="modal-content" style="max-width:400px;">
+        <div class="modal-header">
+            <h2 id="quickTitle">เพิ่มรายการ</h2>
+            <button class="close-btn" onclick="closeQuickModal()">×</button>
+        </div>
+        <div class="direction-toggle">
+            <button class="dir-btn in active" id="quickDirIn" onclick="setQuickDirection('in')">💵 รับเข้า</button>
+            <button class="dir-btn out" id="quickDirOut" onclick="setQuickDirection('out')">💸 จ่ายออก</button>
+        </div>
+        <div class="form-group">
+            <label>💰 จำนวน:</label>
+            <input type="number" id="quickAmount" placeholder="0.00" step="0.01" min="0" inputmode="decimal">
+        </div>
+        <div class="form-group">
+            <label>📅 วันที่:</label>
+            <input type="date" id="quickDate">
+        </div>
+        <div class="form-group">
+            <label>📝 หมายเหตุ:</label>
+            <input type="text" id="quickNote" placeholder="รายละเอียดเพิ่มเติม">
+        </div>
+        <button class="btn-primary" onclick="saveQuickTransaction()">✅ บันทึก</button>
+    </div>
+</div>
+<!-- ITEM HISTORY MODAL -->
+<div class="modal" id="historyModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="historyTitle">📅 ประวัติรายเดือน</h2>
+            <button class="close-btn" onclick="closeHistoryModal()">×</button>
+        </div>
+        <div id="historyContent"></div>
+    </div>
+</div>
+<!-- PDF REPORT CONTAINER (off-screen) -->
+<div id="pdfReport"></div>
+<script>
+// ===== DEFAULT CATEGORIES =====
+const DEFAULT_CATEGORIES = {
+    debt: ['SCB1', 'SCB2', 'KTB1', 'KTB2', 'KTB3', 'KTB4', 'KTB5', 'KTC1', 'KTC2', 'K-BANK X PRESS CASH', 'K-LINE', 'CCARDX', 'ฟินนิกซ์'],
+    personal: ['แม่', 'ป๊ะ', 'น้าตา', 'ป้าแอ๊ว', 'น้าเรียม', 'จุ๋ม', 'เจ๊', 'กองกลาง'],
+    phone: ['ค่าโทร True พุก', 'True ป้าแอ๊ว', 'ค่าโทร Dtac น้าตา'],
+    invest: ['กองทุน BBL: IN-RMF', 'กองทุน K-BANK', 'KGHRMF', 'SCBSSFPLUS-B', 'พอตหุ้น'],
+    income: ['เงินเดือน', 'โบนัส', 'รายรับเสริม', 'ดอกเบี้ย', 'ยอดยกมา', 'อื่นๆ'],
+    expense: ['ค่าอาหาร', 'ค่าเดินทาง', 'ค่าน้ำ-ค่าไฟ', 'ค่าเช่า', 'ค่าช้อปปิ้ง', 'ค่าสุขภาพ', 'ค่าบันเทิง', 'อื่นๆ']
+};
+const GROUP_META = {
+    debt:     { label: '🏦 บัตรเครดิต / สินเชื่อ', color: 'debt', stripe: 'group-stripe-debt' },
+    personal: { label: '👨‍👩‍👧 หนี้บุคคล',         color: 'personal', stripe: 'group-stripe-personal' },
+    phone:    { label: '📞 ค่าโทรศัพท์',          color: 'phone', stripe: 'group-stripe-phone' },
+    invest:   { label: '📈 กองทุน / การลงทุน',    color: 'invest', stripe: 'group-stripe-invest' },
+    income:   { label: '💵 เงินเดือน / รายรับ',   color: 'income', stripe: 'group-stripe-income' },
+    expense:  { label: '💸 รายจ่ายอื่นๆ',          color: 'expense', stripe: 'group-stripe-expense' }
+};
+// กลุ่มที่ถือเป็น "หนี้/ต้องจ่าย" — ใช้แสดงปุ่ม "จ่าย"
+const DEBT_GROUPS = ['debt', 'personal', 'phone'];
+
+// ===== STATE =====
+let transactions = JSON.parse(localStorage.getItem('fm_transactions')) || [];
+let categories = JSON.parse(localStorage.getItem('fm_categories')) || JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+let carryoverDone = JSON.parse(localStorage.getItem('fm_carryoverDone')) || {};
+let collapsedGroups = JSON.parse(localStorage.getItem('fm_collapsed')) || {};
+let currentDate = new Date();
+let listFilter = 'all';
+let summaryMode = 'byMonth';
+let rangeFrom = '';
+let rangeTo = '';
+let selectedGroup = null, selectedCategory = null, direction = 'in';
+let quickGroup = null, quickCategory = null, quickDirection = 'in';
+for (const k in DEFAULT_CATEGORIES) {
+    if (!categories[k]) categories[k] = [...DEFAULT_CATEGORIES[k]];
+}
+function save() {
+    localStorage.setItem('fm_transactions', JSON.stringify(transactions));
+    localStorage.setItem('fm_categories', JSON.stringify(categories));
+    localStorage.setItem('fm_carryoverDone', JSON.stringify(carryoverDone));
+    localStorage.setItem('fm_collapsed', JSON.stringify(collapsedGroups));
+}
+// ===== MONTH UTILS =====
+function getMonthKey(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+function getPrevMonthKey(d) { return getMonthKey(new Date(d.getFullYear(), d.getMonth()-1, 1)); }
+function parseMonthKey(key) { const [y,m] = key.split('-').map(Number); return new Date(y, m-1, 1); }
+function formatMonthThai(d) {
+    const m = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+    return `${m[d.getMonth()]} ${d.getFullYear()+543}`;
+}
+function formatMonthShort(d) {
+    const m = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+    return `${m[d.getMonth()]} ${(d.getFullYear()+543).toString().slice(-2)}`;
+}
+function updateMonthDisplay() {
+    document.getElementById('monthDisplay').textContent = formatMonthThai(currentDate);
+}
+function changeMonth(delta) {
+    currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth()+delta, 1);
+    updateMonthDisplay(); checkCarryover(); renderAll();
+}
+function goToCurrentMonth() {
+    currentDate = new Date();
+    updateMonthDisplay(); checkCarryover(); renderAll();
+}
+// ===== CARRYOVER =====
+function checkCarryover() {
+    const monthKey = getMonthKey(currentDate);
+    if (carryoverDone[monthKey]) return;
+    const prevKey = getPrevMonthKey(currentDate);
+    const prevTrans = transactions.filter(t => t.date.startsWith(prevKey));
+    if (prevTrans.length === 0) { carryoverDone[monthKey] = true; save(); return; }
+    let prevBalance = 0;
+    prevTrans.forEach(t => prevBalance += (t.direction === 'in' ? t.amount : -t.amount));
+    if (prevBalance !== 0) {
+        const exists = transactions.find(t => t.date.startsWith(monthKey) && t.isCarryover);
+        if (!exists) {
+            transactions.push({
+                id: Date.now()+Math.random(),
+                group: 'income', category: 'ยอดยกมา',
+                direction: prevBalance >= 0 ? 'in' : 'out',
+                amount: Math.abs(prevBalance),
+                date: `${monthKey}-01`,
+                note: `ยอดจาก ${formatMonthThai(new Date(currentDate.getFullYear(), currentDate.getMonth()-1, 1))}`,
+                isCarryover: true, createdAt: new Date().toISOString()
+            });
+        }
+    }
+    carryoverDone[monthKey] = true;
+    save();
+}
+function manualCarryover() {
+    const monthKey = getMonthKey(currentDate);
+    delete carryoverDone[monthKey];
+    transactions = transactions.filter(t => !(t.date.startsWith(monthKey) && t.isCarryover));
+    save(); checkCarryover(); renderAll();
+    alert('✅ ยกยอดใหม่เรียบร้อย');
+}
+// ===== TABS =====
+document.querySelectorAll('.nav-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+        if (btn.dataset.tab === 'cats') renderCatsManager();
+        if (btn.dataset.tab === 'list') renderTransactionList();
+        if (btn.dataset.tab === 'summary') renderSummaryTab();
+    });
+});
+document.querySelectorAll('.filter-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+        document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        listFilter = pill.dataset.filter;
+        renderTransactionList();
+    });
+});
+// ===== ADD MODAL =====
+function openAddModal() {
+    selectedGroup = null; selectedCategory = null; direction = 'in';
+    document.getElementById('dirInBtn').classList.add('active');
+    document.getElementById('dirOutBtn').classList.remove('active');
+    document.getElementById('addAmount').value = '';
+    document.getElementById('addNote').value = '';
+    document.getElementById('addDate').valueAsDate = new Date();
+    document.getElementById('selectedCatInfo').textContent = '';
+    renderCategoryGrid();
+    document.getElementById('addModal').classList.add('active');
+}
+function closeAddModal() { document.getElementById('addModal').classList.remove('active'); }
+function setDirection(dir) {
+    direction = dir;
+    document.getElementById('dirInBtn').classList.toggle('active', dir === 'in');
+    document.getElementById('dirOutBtn').classList.toggle('active', dir === 'out');
+}
+function renderCategoryGrid() {
+    const grid = document.getElementById('catGrid');
+    let html = '';
+    for (const g in GROUP_META) {
+        html += `<div class="cat-group-label">${GROUP_META[g].label}</div>`;
+        categories[g].forEach(c => {
+            const sel = selectedGroup === g && selectedCategory === c ? 'selected' : '';
+            html += `<div class="cat-chip ${sel}" onclick="selectCategory('${g}','${c.replace(/'/g, "\\'")}')">${c}</div>`;
+        });
+    }
+    grid.innerHTML = html;
+}
+function selectCategory(group, cat) {
+    selectedGroup = group; selectedCategory = cat;
+    renderCategoryGrid();
+    document.getElementById('selectedCatInfo').textContent = `เลือก: ${GROUP_META[group].label.split(' ').slice(1).join(' ')} → ${cat}`;
+}
+function saveTransaction() {
+    if (!selectedGroup || !selectedCategory) { alert('⚠️ กรุณาเลือกหมวดหมู่'); return; }
+    const amount = parseFloat(document.getElementById('addAmount').value);
+    const date = document.getElementById('addDate').value;
+    const note = document.getElementById('addNote').value;
+    if (!amount || amount <= 0) { alert('⚠️ กรุณากรอกจำนวน'); return; }
+    if (!date) { alert('⚠️ กรุณาเลือกวันที่'); return; }
+    transactions.push({
+        id: Date.now()+Math.random(),
+        group: selectedGroup, category: selectedCategory,
+        direction, amount, date, note,
+        createdAt: new Date().toISOString()
+    });
+    save(); closeAddModal(); renderAll();
+}
+// ===== QUICK MODAL =====
+function openQuickModal(group, cat, defaultDir) {
+    quickGroup = group; quickCategory = cat;
+    quickDirection = (defaultDir === 'out') ? 'out' : 'in';
+    document.getElementById('quickTitle').textContent = (quickDirection === 'out' ? '💸 จ่าย: ' : '+ ') + cat;
+    document.getElementById('quickDirIn').classList.toggle('active', quickDirection === 'in');
+    document.getElementById('quickDirOut').classList.toggle('active', quickDirection === 'out');
+    document.getElementById('quickAmount').value = '';
+    document.getElementById('quickNote').value = '';
+    document.getElementById('quickDate').valueAsDate = new Date();
+    document.getElementById('quickModal').classList.add('active');
+}
+function closeQuickModal() { document.getElementById('quickModal').classList.remove('active'); }
+function setQuickDirection(dir) {
+    quickDirection = dir;
+    document.getElementById('quickDirIn').classList.toggle('active', dir === 'in');
+    document.getElementById('quickDirOut').classList.toggle('active', dir === 'out');
+}
+function saveQuickTransaction() {
+    const amount = parseFloat(document.getElementById('quickAmount').value);
+    const date = document.getElementById('quickDate').value;
+    const note = document.getElementById('quickNote').value;
+    if (!amount || amount <= 0) { alert('⚠️ กรุณากรอกจำนวน'); return; }
+    if (!date) { alert('⚠️ กรุณาเลือกวันที่'); return; }
+    transactions.push({
+        id: Date.now()+Math.random(),
+        group: quickGroup, category: quickCategory,
+        direction: quickDirection,
+        amount, date, note,
+        createdAt: new Date().toISOString()
+    });
+    save(); closeQuickModal(); renderAll();
+}
+// ===== RENDERING =====
+function getMonthTransactions() {
+    return transactions.filter(t => t.date.startsWith(getMonthKey(currentDate)));
+}
+function fmt(n) {
+    return n.toLocaleString('th-TH', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+}
+function renderAll() {
+    renderSummary(); renderGroups(); renderTransactionList();
+    if (document.getElementById('tab-summary').classList.contains('active')) renderSummaryTab();
+    document.getElementById('totalCount').textContent = transactions.length;
+    document.getElementById('monthCount').textContent = getMonthTransactions().length;
+}
+function renderSummary() {
+    const monthTrans = getMonthTransactions();
+    let inSum = 0, outSum = 0, debtSum = 0;
+    monthTrans.forEach(t => {
+        if (t.direction === 'in') inSum += t.amount; else outSum += t.amount;
+        if (t.direction === 'out' && ['debt','personal','phone'].includes(t.group)) debtSum += t.amount;
+    });
+    const pureOut = monthTrans.filter(t => t.direction === 'out' && t.group === 'expense').reduce((s,t) => s+t.amount, 0);
+    document.getElementById('sumIn').textContent = fmt(inSum);
+    document.getElementById('sumDebt').textContent = fmt(debtSum);
+    document.getElementById('sumOut').textContent = fmt(pureOut);
+    const balance = inSum - outSum;
+    document.getElementById('sumBalance').textContent = fmt(balance);
+    const carry = monthTrans.find(t => t.isCarryover);
+    document.getElementById('carryTag').innerHTML = carry
+        ? `<span class="carryover-tag">🔄 ยอดยกมา: ${fmt(carry.amount)}</span>` : '';
+}
+function renderGroups() {
+    const container = document.getElementById('groupsContainer');
+    const monthTrans = getMonthTransactions();
+    let html = '';
+    for (const g in GROUP_META) {
+        const meta = GROUP_META[g];
+        const collapsed = collapsedGroups[g] ? 'collapsed' : '';
+        const groupTrans = monthTrans.filter(t => t.group === g);
+        const groupIn = groupTrans.filter(t => t.direction === 'in').reduce((s,t)=>s+t.amount, 0);
+        const groupOut = groupTrans.filter(t => t.direction === 'out').reduce((s,t)=>s+t.amount, 0);
+        const groupBalance = groupIn - groupOut;
+        const isDebtLike = DEBT_GROUPS.includes(g);
+        html += `<div class="group ${collapsed} ${meta.stripe}">
+            <div class="group-header ${meta.color}" onclick="toggleGroup('${g}')">
+                <div>
+                    <div class="group-title">${meta.label}</div>
+                    <div class="group-total">
+                        <span style="color:var(--success);">IN ${fmt(groupIn)}</span> •
+                        <span style="color:var(--danger);">OUT ${fmt(groupOut)}</span> •
+                        <span style="color:var(--primary);">คงเหลือ ${fmt(groupBalance)}</span>
+                    </div>
+                </div>
+                <span class="group-toggle">▼</span>
+            </div>
+            <div class="group-body">`;
+        categories[g].forEach(cat => {
+            const catTrans = groupTrans.filter(t => t.category === cat);
+            const catIn = catTrans.filter(t => t.direction === 'in').reduce((s,t)=>s+t.amount, 0);
+            const catOut = catTrans.filter(t => t.direction === 'out').reduce((s,t)=>s+t.amount, 0);
+            const catBal = catIn - catOut;
+            const catColor = catBal > 0 ? 'pos' : catBal < 0 ? 'neg' : 'zero';
+            const safeCat = cat.replace(/'/g, "\\'");
+            const payBtn = isDebtLike
+                ? `<button class="pay-btn" onclick="event.stopPropagation(); openQuickModal('${g}', '${safeCat}', 'out')">💸 จ่าย</button>`
+                : '';
+            html += `<div class="item-row">
+                <div>
+                    <div class="item-name">${cat}</div>
+                    <div class="item-totals">
+                        <span class="in-val">↑ ${fmt(catIn)}</span> •
+                        <span class="out-val">↓ ${fmt(catOut)}</span>
+                    </div>
+                    <button class="item-history-btn" onclick="event.stopPropagation(); openHistoryModal('${g}', '${safeCat}')">📅 ดูประวัติทั้งหมด</button>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                    <div class="item-balance ${catColor}">${fmt(catBal)}</div>
+                    <div style="display:flex; gap:6px;">
+                        ${payBtn}
+                        <button class="quick-add-btn" style="margin-left:0;" onclick="event.stopPropagation(); openQuickModal('${g}', '${safeCat}')">+ เพิ่ม</button>
+                    </div>
+                </div>
+            </div>`;
+        });
+        html += `</div></div>`;
+    }
+    container.innerHTML = html;
+}
+function toggleGroup(group) {
+    collapsedGroups[group] = !collapsedGroups[group];
+    save(); renderGroups();
+}
+function renderTransactionList() {
+    const monthTrans = getMonthTransactions();
+    let filtered = monthTrans;
+    if (listFilter === 'in') filtered = monthTrans.filter(t => t.direction === 'in');
+    else if (listFilter === 'out') filtered = monthTrans.filter(t => t.direction === 'out');
+    else if (['debt','personal','phone','invest','income','expense'].includes(listFilter)) {
+        filtered = monthTrans.filter(t => t.group === listFilter);
+    }
+    const sorted = [...filtered].sort((a,b) => new Date(b.date) - new Date(a.date));
+    const el = document.getElementById('transactionList');
+    if (sorted.length === 0) { el.innerHTML = '<div class="empty">ไม่มีรายการ</div>'; return; }
+    el.innerHTML = sorted.map(t => {
+        const meta = GROUP_META[t.group] || { label: t.group, stripe: '' };
+        const icon = t.direction === 'in' ? '↑' : '↓';
+        const cls = t.direction === 'in' ? 'in' : 'out';
+        const sign = t.direction === 'in' ? '+' : '-';
+        const carryFlag = t.isCarryover ? ' 🔄' : '';
+        return `<div class="trans-item ${meta.stripe}">
+            <div>
+                <div style="font-weight:600;">${t.category}${carryFlag}</div>
+                <div class="meta">${meta.label} • ${new Date(t.date).toLocaleDateString('th-TH')}${t.note ? ' • '+t.note : ''}</div>
+            </div>
+            <div class="amt ${cls}">${icon} ${sign}${fmt(t.amount)}</div>
+            <button class="btn-danger" onclick="deleteTransaction(${t.id})">🗑️</button>
+        </div>`;
+    }).join('');
+}
+function deleteTransaction(id) {
+    if (!confirm('ลบรายการนี้?')) return;
+    transactions = transactions.filter(t => t.id !== id);
+    save(); renderAll();
+}
+// ===== SUMMARY TAB =====
+function setSummaryMode(mode) {
+    summaryMode = mode;
+    document.querySelectorAll('.summary-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    document.getElementById('modeByMonth').style.display = mode === 'byMonth' ? 'block' : 'none';
+    document.getElementById('modeByItem').style.display = mode === 'byItem' ? 'block' : 'none';
+    renderSummaryTab();
+}
+function setQuickRange(value) {
+    document.querySelectorAll('.quick-range-btn').forEach(b => b.classList.remove('active'));
+    if (typeof event !== 'undefined' && event.target) event.target.classList.add('active');
+    const now = new Date();
+    let from;
+    if (value === 'ytd') {
+        from = new Date(now.getFullYear(), 0, 1);
+    } else if (value === 'all') {
+        // Find earliest transaction
+        if (transactions.length === 0) from = new Date(now.getFullYear(), 0, 1);
+        else {
+            const dates = transactions.map(t => t.date).sort();
+            from = parseMonthKey(dates[0].substring(0,7));
+        }
+    } else {
+        from = new Date(now.getFullYear(), now.getMonth() - value + 1, 1);
+    }
+    document.getElementById('rangeFrom').value = getMonthKey(from);
+    document.getElementById('rangeTo').value = getMonthKey(now);
+    renderSummaryTab();
+}
+function getMonthsInRange() {
+    const from = document.getElementById('rangeFrom').value;
+    const to = document.getElementById('rangeTo').value;
+    if (!from || !to) return [];
+    const months = [];
+    let cur = parseMonthKey(from);
+    const end = parseMonthKey(to);
+    while (cur <= end) {
+        months.push(getMonthKey(cur));
+        cur = new Date(cur.getFullYear(), cur.getMonth()+1, 1);
+    }
+    return months;
+}
+function renderSummaryTab() {
+    if (!document.getElementById('rangeFrom').value) {
+        setQuickRange(12);
+        return;
+    }
+    populateItemPicker();
+    if (summaryMode === 'byMonth') renderByMonth();
+    else renderByItem();
+}
+function populateItemPicker() {
+    const sel = document.getElementById('itemPicker');
+    const current = sel.value;
+    let html = '<option value="">-- เลือกรายการ --</option>';
+    for (const g in GROUP_META) {
+        html += `<optgroup label="${GROUP_META[g].label}">`;
+        categories[g].forEach(c => {
+            html += `<option value="${g}::${c}">${c}</option>`;
+        });
+        html += `</optgroup>`;
+    }
+    sel.innerHTML = html;
+    if (current) sel.value = current;
+}
+function renderByMonth() {
+    const months = getMonthsInRange();
+    if (months.length === 0) { document.getElementById('byMonthContent').innerHTML = '<div class="empty">กรุณาเลือกช่วงเดือน</div>'; return; }
+    let html = '';
+    // Overall summary table per month
+    html += `<div class="bar-chart"><h3>📊 สรุป IN / OUT แต่ละเดือน</h3>`;
+    const monthData = months.map(mk => {
+        const t = transactions.filter(tr => tr.date.startsWith(mk));
+        const ti = t.filter(x => x.direction === 'in').reduce((s,x)=>s+x.amount, 0);
+        const to_ = t.filter(x => x.direction === 'out').reduce((s,x)=>s+x.amount, 0);
+        return { month: mk, in: ti, out: to_, balance: ti - to_ };
+    });
+    const maxVal = Math.max(...monthData.map(d => Math.max(d.in, d.out)), 1);
+    monthData.forEach(d => {
+        const inPct = (d.in / maxVal) * 100;
+        const outPct = (d.out / maxVal) * 100;
+        html += `<div style="margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:3px; font-size:0.85em;">
+                <strong>${formatMonthShort(parseMonthKey(d.month))}</strong>
+                <span style="color:${d.balance >= 0 ? 'var(--success)' : 'var(--danger)'}; font-weight:700;">${fmt(d.balance)}</span>
+            </div>
+            <div class="bar-container" style="margin-bottom:3px;">
+                <div class="bar-fill-in" style="width:${inPct}%; min-width:${d.in > 0 ? '3px' : '0'};" title="IN ${fmt(d.in)}"></div>
+            </div>
+            <div class="bar-container">
+                <div class="bar-fill-out" style="width:${outPct}%; min-width:${d.out > 0 ? '3px' : '0'};" title="OUT ${fmt(d.out)}"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.7em; color:var(--gray); margin-top:2px;">
+                <span class="in-cell">IN ${fmt(d.in)}</span>
+                <span class="out-cell">OUT ${fmt(d.out)}</span>
+            </div>
+        </div>`;
+    });
+    html += `</div>`;
+    // Per-group breakdown table
+    html += `<div class="scroll-x"><table class="summary-table">
+        <thead><tr><th>เดือน</th><th>IN</th><th>OUT</th><th>คงเหลือ</th></tr></thead>
+        <tbody>`;
+    let totalIn = 0, totalOut = 0;
+    monthData.forEach(d => {
+        totalIn += d.in; totalOut += d.out;
+        const balCls = d.balance > 0 ? 'pos' : d.balance < 0 ? 'neg' : 'zero';
+        html += `<tr>
+            <td><strong>${formatMonthShort(parseMonthKey(d.month))}</strong></td>
+            <td class="in-cell">${fmt(d.in)}</td>
+            <td class="out-cell">${fmt(d.out)}</td>
+            <td class="bal-cell ${balCls}">${fmt(d.balance)}</td>
+        </tr>`;
+    });
+    const grandBal = totalIn - totalOut;
+    const grandCls = grandBal > 0 ? 'pos' : grandBal < 0 ? 'neg' : 'zero';
+    html += `<tr class="total-row">
+        <td>รวม</td>
+        <td class="in-cell">${fmt(totalIn)}</td>
+        <td class="out-cell">${fmt(totalOut)}</td>
+        <td class="bal-cell ${grandCls}">${fmt(grandBal)}</td>
+    </tr></tbody></table></div>`;
+    // Per-group monthly summary
+    html += `<div style="margin-top:16px;"><h3 style="margin-bottom:10px; font-size:1em;">📂 แยกตามกลุ่ม</h3>`;
+    for (const g in GROUP_META) {
+        const meta = GROUP_META[g];
+        const grpData = months.map(mk => {
+            const t = transactions.filter(tr => tr.date.startsWith(mk) && tr.group === g);
+            const ti = t.filter(x => x.direction === 'in').reduce((s,x)=>s+x.amount, 0);
+            const to_ = t.filter(x => x.direction === 'out').reduce((s,x)=>s+x.amount, 0);
+            return { month: mk, in: ti, out: to_, balance: ti - to_ };
+        });
+        const gTotalIn = grpData.reduce((s,d)=>s+d.in, 0);
+        const gTotalOut = grpData.reduce((s,d)=>s+d.out, 0);
+        if (gTotalIn === 0 && gTotalOut === 0) continue;
+        const gBal = gTotalIn - gTotalOut;
+        const gCls = gBal > 0 ? 'pos' : gBal < 0 ? 'neg' : 'zero';
+        html += `<div class="group ${meta.stripe}" style="margin-bottom:10px;">
+            <div class="group-header ${meta.color}">
+                <div class="group-title">${meta.label}</div>
+                <div style="text-align:right; font-size:0.78em;">
+                    <div class="in-cell">IN ${fmt(gTotalIn)}</div>
+                    <div class="out-cell">OUT ${fmt(gTotalOut)}</div>
+                    <div class="bal-cell ${gCls}">คงเหลือ ${fmt(gBal)}</div>
+                </div>
+            </div>
+        </div>`;
+    }
+    html += `</div>`;
+    document.getElementById('byMonthContent').innerHTML = html;
+}
+function renderByItem() {
+    const sel = document.getElementById('itemPicker').value;
+    if (!sel) {
+        document.getElementById('byItemContent').innerHTML = '<div class="empty">เลือกรายการเพื่อดูประวัติ</div>';
+        return;
+    }
+    const [group, category] = sel.split('::');
+    const months = getMonthsInRange();
+    if (months.length === 0) return;
+    let html = '';
+    const data = months.map(mk => {
+        const t = transactions.filter(tr =>
+            tr.date.startsWith(mk) && tr.group === group && tr.category === category
+        );
+        const ti = t.filter(x => x.direction === 'in').reduce((s,x)=>s+x.amount, 0);
+        const to_ = t.filter(x => x.direction === 'out').reduce((s,x)=>s+x.amount, 0);
+        return { month: mk, in: ti, out: to_, balance: ti - to_, count: t.length };
+    });
+    let totalIn = 0, totalOut = 0;
+    data.forEach(d => { totalIn += d.in; totalOut += d.out; });
+    const grandBal = totalIn - totalOut;
+    const grandCls = grandBal > 0 ? 'pos' : grandBal < 0 ? 'neg' : 'zero';
+    // Header card
+    html += `<div class="bar-chart">
+        <h3>${GROUP_META[group].label} → ${category}</h3>
+        <div class="summary-grid" style="margin-top:8px;">
+            <div class="summary-card in"><div class="label">รับเข้า</div><div class="value">${fmt(totalIn)}</div></div>
+            <div class="summary-card out"><div class="label">จ่ายออก</div><div class="value">${fmt(totalOut)}</div></div>
+            <div class="summary-card balance"><div class="label">คงเหลือสุทธิ</div><div class="value">${fmt(grandBal)}</div></div>
+        </div>
+    </div>`;
+    // Bar chart per month
+    const maxVal = Math.max(...data.map(d => Math.max(d.in, d.out)), 1);
+    html += `<div class="bar-chart"><h3>📊 ยอดรายเดือน</h3>`;
+    data.forEach(d => {
+        const inPct = (d.in / maxVal) * 100;
+        const outPct = (d.out / maxVal) * 100;
+        const balCls = d.balance > 0 ? 'var(--success)' : d.balance < 0 ? 'var(--danger)' : 'var(--gray)';
+        html += `<div style="margin-bottom:10px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:3px; font-size:0.85em;">
+                <strong>${formatMonthShort(parseMonthKey(d.month))}</strong>
+                <span style="color:${balCls}; font-weight:700;">${fmt(d.balance)}</span>
+            </div>
+            <div class="bar-container" style="margin-bottom:3px;">
+                <div class="bar-fill-in" style="width:${inPct}%; min-width:${d.in > 0 ? '3px' : '0'};"></div>
+            </div>
+            <div class="bar-container">
+                <div class="bar-fill-out" style="width:${outPct}%; min-width:${d.out > 0 ? '3px' : '0'};"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:0.7em; color:var(--gray); margin-top:2px;">
+                <span class="in-cell">IN ${fmt(d.in)}</span>
+                <span class="out-cell">OUT ${fmt(d.out)}</span>
+            </div>
+        </div>`;
+    });
+    html += `</div>`;
+    // Detail table
+    html += `<div class="scroll-x"><table class="summary-table">
+        <thead><tr><th>เดือน</th><th>รายการ</th><th>IN</th><th>OUT</th><th>คงเหลือ</th></tr></thead>
+        <tbody>`;
+    data.forEach(d => {
+        const balCls = d.balance > 0 ? 'pos' : d.balance < 0 ? 'neg' : 'zero';
+        html += `<tr>
+            <td><strong>${formatMonthShort(parseMonthKey(d.month))}</strong></td>
+            <td style="text-align:center; color:var(--gray);">${d.count}</td>
+            <td class="in-cell">${fmt(d.in)}</td>
+            <td class="out-cell">${fmt(d.out)}</td>
+            <td class="bal-cell ${balCls}">${fmt(d.balance)}</td>
+        </tr>`;
+    });
+    html += `<tr class="total-row">
+        <td colspan="2">รวมทั้งหมด</td>
+        <td class="in-cell">${fmt(totalIn)}</td>
+        <td class="out-cell">${fmt(totalOut)}</td>
+        <td class="bal-cell ${grandCls}">${fmt(grandBal)}</td>
+    </tr></tbody></table></div>`;
+    document.getElementById('byItemContent').innerHTML = html;
+}
+document.getElementById('rangeFrom').addEventListener('change', renderSummaryTab);
+document.getElementById('rangeTo').addEventListener('change', renderSummaryTab);
+// ===== ITEM HISTORY MODAL =====
+function openHistoryModal(group, category) {
+    const allTrans = transactions.filter(t => t.group === group && t.category === category);
+    // Group by month
+    const byMonth = {};
+    allTrans.forEach(t => {
+        const mk = t.date.substring(0,7);
+        if (!byMonth[mk]) byMonth[mk] = { in: 0, out: 0, items: [] };
+        byMonth[mk].items.push(t);
+        if (t.direction === 'in') byMonth[mk].in += t.amount;
+        else byMonth[mk].out += t.amount;
+    });
+    const months = Object.keys(byMonth).sort().reverse();
+    let totalIn = 0, totalOut = 0;
+    months.forEach(m => { totalIn += byMonth[m].in; totalOut += byMonth[m].out; });
+    const totalBal = totalIn - totalOut;
+    const balCls = totalBal > 0 ? 'pos' : totalBal < 0 ? 'neg' : 'zero';
+    document.getElementById('historyTitle').textContent = `📅 ${category} (ประวัติทั้งหมด)`;
+    let html = `<div class="summary-grid">
+        <div class="summary-card in"><div class="label">รับเข้ารวม</div><div class="value">${fmt(totalIn)}</div></div>
+        <div class="summary-card out"><div class="label">จ่ายออกรวม</div><div class="value">${fmt(totalOut)}</div></div>
+        <div class="summary-card balance"><div class="label">คงเหลือสุทธิ</div><div class="value">${fmt(totalBal)}</div></div>
+    </div>`;
+    if (months.length === 0) {
+        html += '<div class="empty">ยังไม่มีรายการ</div>';
+    } else {
+        html += `<div class="scroll-x"><table class="summary-table" style="margin-top:12px;">
+            <thead><tr><th>เดือน</th><th>จำนวน</th><th>IN</th><th>OUT</th><th>คงเหลือ</th></tr></thead><tbody>`;
+        months.forEach(m => {
+            const d = byMonth[m];
+            const bal = d.in - d.out;
+            const cls = bal > 0 ? 'pos' : bal < 0 ? 'neg' : 'zero';
+            html += `<tr>
+                <td><strong>${formatMonthShort(parseMonthKey(m))}</strong></td>
+                <td style="text-align:center;">${d.items.length}</td>
+                <td class="in-cell">${fmt(d.in)}</td>
+                <td class="out-cell">${fmt(d.out)}</td>
+                <td class="bal-cell ${cls}">${fmt(bal)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table></div>`;
+    }
+    document.getElementById('historyContent').innerHTML = html;
+    document.getElementById('historyModal').classList.add('active');
+}
+function closeHistoryModal() { document.getElementById('historyModal').classList.remove('active'); }
+// ===== CATEGORIES MANAGEMENT =====
+function renderCatsManager() {
+    const el = document.getElementById('catsManager');
+    let html = '';
+    for (const g in GROUP_META) {
+        const meta = GROUP_META[g];
+        html += `<div class="group ${meta.stripe}" style="margin-bottom:10px;">
+            <div class="group-header ${meta.color}">
+                <div class="group-title">${meta.label}</div>
+                <span style="font-size:0.85em; color:var(--gray);">${categories[g].length} รายการ</span>
+            </div>
+            <div class="group-body">`;
+        categories[g].forEach(c => {
+            html += `<div class="item-row">
+                <div class="item-name">${c}</div>
+                <button class="cat-edit-btn" onclick="removeCategory('${g}','${c.replace(/'/g, "\\'")}')">🗑️</button>
+            </div>`;
+        });
+        html += `<div class="add-cat-row">
+                <input type="text" id="newCat_${g}" placeholder="เพิ่ม...">
+                <button onclick="addCategory('${g}')">+</button>
+            </div>`;
+        html += `</div></div>`;
+    }
+    el.innerHTML = html;
+}
+function addCategory(g) {
+    const input = document.getElementById(`newCat_${g}`);
+    const val = input.value.trim();
+    if (!val) return;
+    if (categories[g].includes(val)) { alert('⚠️ มีหมวดนี้แล้ว'); return; }
+    categories[g].push(val);
+    save(); input.value = '';
+    renderCatsManager();
+}
+function removeCategory(g, c) {
+    if (!confirm(`ลบหมวด "${c}" ?`)) return;
+    categories[g] = categories[g].filter(x => x !== c);
+    save(); renderCatsManager(); renderGroups();
+}
+function resetCategoriesToDefault() {
+    if (!confirm('รีเซ็ตหมวดหมู่ทั้งหมดเป็นค่าเริ่มต้น?')) return;
+    categories = JSON.parse(JSON.stringify(DEFAULT_CATEGORIES));
+    save(); renderCatsManager(); renderGroups();
+    alert('✅ รีเซ็ตแล้ว');
+}
+// ===== IMPORT / EXPORT (JSON) =====
+function exportData() {
+    const data = { transactions, categories, carryoverDone, version: 3, exportedAt: new Date().toISOString() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `finance-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+function importData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = e => {
+        const file = e.target.files[0];
+        const reader = new FileReader();
+        reader.onload = evt => {
+            try {
+                const data = JSON.parse(evt.target.result);
+                if (data.transactions) transactions = data.transactions;
+                if (data.categories) categories = data.categories;
+                if (data.carryoverDone) carryoverDone = data.carryoverDone;
+                for (const k in DEFAULT_CATEGORIES) {
+                    if (!categories[k]) categories[k] = [...DEFAULT_CATEGORIES[k]];
+                }
+                save(); renderAll();
+                alert('✅ นำเข้าเรียบร้อย');
+            } catch (err) { alert('❌ ไฟล์ไม่ถูกต้อง'); }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+// ===== EXPORT PDF (รายงานเดือนปัจจุบัน) =====
+function buildPdfReportHTML() {
+    const mk = getMonthKey(currentDate);
+    const monthTrans = transactions.filter(t => t.date.startsWith(mk));
+    let inSum = 0, outSum = 0, debtSum = 0;
+    monthTrans.forEach(t => {
+        if (t.direction === 'in') inSum += t.amount; else outSum += t.amount;
+        if (t.direction === 'out' && DEBT_GROUPS.includes(t.group)) debtSum += t.amount;
+    });
+    const pureOut = monthTrans.filter(t => t.direction === 'out' && t.group === 'expense').reduce((s,t)=>s+t.amount, 0);
+    const balance = inSum - outSum;
+    const today = new Date().toLocaleDateString('th-TH', { day:'numeric', month:'long', year:'numeric' });
+
+    let html = `<div class="pdf-title">💰 รายงานการเงิน — ${formatMonthThai(currentDate)}</div>
+        <div class="pdf-sub">Wiyakarn • ออกรายงานเมื่อ ${today}</div>
+        <div class="pdf-cards">
+            <div class="pdf-card"><div class="l">💵 รายรับ</div><div class="v" style="color:#059669;">${fmt(inSum)}</div></div>
+            <div class="pdf-card"><div class="l">🏦 หนี้สิน (จ่าย)</div><div class="v" style="color:#d97706;">${fmt(debtSum)}</div></div>
+            <div class="pdf-card"><div class="l">💸 รายจ่าย</div><div class="v" style="color:#dc2626;">${fmt(pureOut)}</div></div>
+            <div class="pdf-card"><div class="l">💳 คงเหลือ</div><div class="v" style="color:#1e40af;">${fmt(balance)}</div></div>
+        </div>`;
+
+    // ตารางแยกตามกลุ่ม + รายการย่อย
+    html += `<h3>📂 สรุปแยกตามหมวดหมู่</h3>
+        <table><thead><tr><th>หมวดหมู่</th><th>รับเข้า (IN)</th><th>จ่ายออก (OUT)</th><th>คงเหลือ</th></tr></thead><tbody>`;
+    for (const g in GROUP_META) {
+        const meta = GROUP_META[g];
+        const groupTrans = monthTrans.filter(t => t.group === g);
+        const gIn = groupTrans.filter(t => t.direction === 'in').reduce((s,t)=>s+t.amount, 0);
+        const gOut = groupTrans.filter(t => t.direction === 'out').reduce((s,t)=>s+t.amount, 0);
+        if (gIn === 0 && gOut === 0) continue;
+        html += `<tr class="g-row"><td>${meta.label}</td>
+            <td style="color:#059669;">${fmt(gIn)}</td>
+            <td style="color:#dc2626;">${fmt(gOut)}</td>
+            <td>${fmt(gIn - gOut)}</td></tr>`;
+        categories[g].forEach(cat => {
+            const ct = groupTrans.filter(t => t.category === cat);
+            const cIn = ct.filter(t => t.direction === 'in').reduce((s,t)=>s+t.amount, 0);
+            const cOut = ct.filter(t => t.direction === 'out').reduce((s,t)=>s+t.amount, 0);
+            if (cIn === 0 && cOut === 0) return;
+            html += `<tr><td style="padding-left:22px;">${cat}</td>
+                <td style="color:#059669;">${fmt(cIn)}</td>
+                <td style="color:#dc2626;">${fmt(cOut)}</td>
+                <td>${fmt(cIn - cOut)}</td></tr>`;
+        });
+    }
+    html += `<tr class="g-row"><td>รวมทั้งสิ้น</td>
+        <td style="color:#059669;">${fmt(inSum)}</td>
+        <td style="color:#dc2626;">${fmt(outSum)}</td>
+        <td>${fmt(balance)}</td></tr>`;
+    html += `</tbody></table>`;
+
+    // รายการทั้งหมดของเดือน
+    const sorted = [...monthTrans].sort((a,b) => new Date(a.date) - new Date(b.date));
+    html += `<h3>📋 รายการทั้งหมด (${sorted.length} รายการ)</h3>`;
+    if (sorted.length === 0) {
+        html += `<div style="color:#6b7280; font-size:12px;">ไม่มีรายการในเดือนนี้</div>`;
+    } else {
+        html += `<table><thead><tr><th>วันที่</th><th>หมวดหมู่</th><th>หมายเหตุ</th><th>ทิศทาง</th><th>จำนวน</th></tr></thead><tbody>`;
+        sorted.forEach(t => {
+            const meta = GROUP_META[t.group] || { label: t.group };
+            const dirTxt = t.direction === 'in' ? 'รับเข้า' : 'จ่ายออก';
+            const color = t.direction === 'in' ? '#059669' : '#dc2626';
+            const sign = t.direction === 'in' ? '+' : '-';
+            html += `<tr>
+                <td>${new Date(t.date).toLocaleDateString('th-TH')}</td>
+                <td>${t.category}${t.isCarryover ? ' 🔄' : ''}<div style="font-size:10px;color:#6b7280;">${meta.label}</div></td>
+                <td style="font-size:11px;color:#6b7280;">${t.note || '-'}</td>
+                <td style="color:${color};">${dirTxt}</td>
+                <td style="color:${color}; font-weight:bold;">${sign}${fmt(t.amount)}</td>
+            </tr>`;
+        });
+        html += `</tbody></table>`;
+    }
+    return html;
+}
+
+async function exportPDF() {
+    if (!window.jspdf || typeof html2canvas === 'undefined') {
+        alert('⚠️ ไม่สามารถสร้าง PDF ได้ — กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วลองใหม่');
+        return;
+    }
+    const report = document.getElementById('pdfReport');
+    report.innerHTML = buildPdfReportHTML();
+    try {
+        const canvas = await html2canvas(report, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const pageW = pdf.internal.pageSize.getWidth();
+        const pageH = pdf.internal.pageSize.getHeight();
+        const imgW = pageW;
+        const imgH = canvas.height * imgW / canvas.width;
+        const imgData = canvas.toDataURL('image/png');
+        let heightLeft = imgH;
+        let position = 0;
+        pdf.addImage(imgData, 'PNG', 0, position, imgW, imgH);
+        heightLeft -= pageH;
+        while (heightLeft > 0) {
+            position -= pageH;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgW, imgH);
+            heightLeft -= pageH;
+        }
+        pdf.save(`finance-report-${getMonthKey(currentDate)}.pdf`);
+    } catch (err) {
+        alert('❌ สร้าง PDF ไม่สำเร็จ: ' + err.message);
+    } finally {
+        report.innerHTML = '';
+    }
+}
+function clearAllData() {
+    if (!confirm('⚠️ ลบข้อมูลทั้งหมด? (ไม่สามารถกู้คืน)')) return;
+    if (!confirm('⚠️ ยืนยันอีกครั้ง — ข้อมูลจะหายถาวร')) return;
+    transactions = []; carryoverDone = {};
+    save(); renderAll();
+    alert('✅ ลบข้อมูลแล้ว');
+}
+document.querySelectorAll('.modal').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('active'); });
+});
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('addDate').valueAsDate = new Date();
+    document.getElementById('quickDate').valueAsDate = new Date();
+    updateMonthDisplay();
+    checkCarryover();
+    renderAll();
+});
+</script>
+</body>
+</html>
